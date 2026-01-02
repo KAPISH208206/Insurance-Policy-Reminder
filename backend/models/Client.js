@@ -17,6 +17,11 @@ const clientSchema = new mongoose.Schema({
     ref: 'Admin',
     required: true,
     index: true
+  },
+  brokerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Broker',
+    required: false
   }
 }, {
   timestamps: true

@@ -10,7 +10,7 @@ const twilio = require('twilio');
 const sendWhatsAppMessage = async (to, body) => {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromWhatsAppNumber = process.env.TWILIO_WHATSAPP_NUMBER;
+  const fromWhatsAppNumber = process.env.TWILIO_WHATSAPP_FROM;
 
   // Step 13.4: Handle missing/invalid credentials gracefully
   if (!accountSid || !authToken || !fromWhatsAppNumber || accountSid === 'INVALID' || authToken === 'INVALID') {
