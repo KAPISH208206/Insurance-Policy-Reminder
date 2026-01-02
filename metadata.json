@@ -1,0 +1,8 @@
+{
+  "name": "Insurify Pro - Modern Insurance Management",
+  "description": "A comprehensive React-based insurance management system featuring policy tracking, claims management, and an AI-powered insurance assistant using Gemini.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
