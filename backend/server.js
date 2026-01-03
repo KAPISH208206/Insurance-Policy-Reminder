@@ -77,14 +77,8 @@ if (require.main === module) {
 }
 
 // Global Error Handling to prevent crash
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-});
+// Global Error Handling
+// Note: In serverless, we generally want to let errors bubble up or be caught by middleware.
+// Explicitly shutting down the process is bad practice in Vercel.
 
 module.exports = app;
