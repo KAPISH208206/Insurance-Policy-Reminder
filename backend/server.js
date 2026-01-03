@@ -37,20 +37,43 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Insurance Backend is running' });
 });
 
+// Vercel Cron Route
+app.get('/api/cron', async (req, res) => {
+  // Validate Vercel Cron Header to prevent abuse
+  const authHeader = req.headers['authorization'];
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const { runReminderJob } = require('./cron/reminderCron');
+    console.log('--- Triggering Cron via Vercel Route ---');
+    await runReminderJob();
+    res.json({ message: 'Cron job executed successfully' });
+  } catch (err) {
+    console.error('Cron Route Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Only listen if not running in Vercel (Vercel exports the app)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 
 // Global Error Handling to prevent crash
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
   console.error(err.name, err.message);
-  // Ideally restart logic here, but for now log it.
 });
 
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION! 💥 Shutting down...');
   console.error(err.name, err.message);
 });
+
+module.exports = app;
