@@ -20,6 +20,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Ensure DB is connected before handling any request (Critical for Serverless with bufferCommands: false)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection failed in middleware:', err);
+    res.status(500).json({ message: 'Database connection failed' });
+  }
+});
+
 // Routes
 app.use('/admin', require('./routes/admin'));
 app.use('/clients', require('./routes/clients'));
