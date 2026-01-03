@@ -1,27 +1,43 @@
 
 const mongoose = require('mongoose');
 
-const connectDB = async () => {
-  const MAX_RETRIES = 5;
-  let retries = 0;
+let cached = global.mongoose;
 
-  while (retries < MAX_RETRIES) {
-    try {
-      const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/insurance_db');
-      console.log(`MongoDB Connected: ${conn.connection.host}`);
-      return;
-    } catch (error) {
-      retries++;
-      console.error(`MongoDB Connection Error (Attempt ${retries}/${MAX_RETRIES}): ${error.message}`);
-      if (retries === MAX_RETRIES) {
-        console.error('MAX RETRIES REACHED. Exiting...');
-        // Only exit if we truly can't connect after multiple attempts
-        process.exit(1);
-      }
-      // Wait 5 seconds before retrying
-      await new Promise(res => setTimeout(res, 5000));
-    }
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+const connectDB = async () => {
+  if (cached.conn) {
+    console.log('Using cached MongoDB connection');
+    return cached.conn;
   }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false, // Disable Mongoose buffering for serverless
+    };
+
+    const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/insurance_db';
+
+    console.log('Connecting to MongoDB...');
+    cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+      console.log('MongoDB Connected Successfully');
+      return mongoose;
+    }).catch(err => {
+      console.error('MongoDB Connection Error:', err);
+      throw err;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
 };
 
 module.exports = connectDB;
