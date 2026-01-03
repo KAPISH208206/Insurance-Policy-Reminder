@@ -34,7 +34,8 @@ app.use('/clients', require('./routes/clients'));
 app.use('/policies', require('./routes/policies'));
 
 // Initialize Cron Job
-initCron();
+// Initialize Cron Job
+// initCron(); // Disabled for Vercel Serverless - we use the /api/cron route implementation below
 
 // Basic Route
 app.get('/', (req, res) => {
