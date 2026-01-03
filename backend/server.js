@@ -8,9 +8,6 @@ const { initCron } = require('./cron/reminderCron');
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
 
 // Middleware
