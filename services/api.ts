@@ -14,9 +14,19 @@ const handleResponse = async (response: Response) => {
     window.location.reload();
     throw new Error('Unauthorized');
   }
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message || 'API Error');
-  return data;
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'API Error');
+    } else {
+      const text = await response.text();
+      console.error("Server Error (HTML/Text Response):", text);
+      throw new Error("Server Error: Check browser console for details.");
+    }
+  }
+
+  return await response.json();
 };
 
 export const api = {
