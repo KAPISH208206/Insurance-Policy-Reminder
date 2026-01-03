@@ -9,7 +9,7 @@ const reminderLogSchema = new mongoose.Schema({
   },
   reminderDay: {
     type: Number,
-    enum: [30, 20, 10, 5, 1, 0],
+    enum: [30, 20, 15, 10, 5, 1, 0],
     required: true
   },
   sentAt: {

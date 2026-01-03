@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { getChatbotResponse } from '../services/chatbotRules';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ChatMessage } from '../types';
 
 const GeminiAssistant: React.FC = () => {
@@ -17,10 +16,10 @@ const GeminiAssistant: React.FC = () => {
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
-        { 
-          role: 'model', 
-          text: "Hello! I'm your Insurance Assistant. I can help you manage clients, policies, and WhatsApp reminders. What can I help you with today?", 
-          timestamp: new Date() 
+        {
+          role: 'model',
+          text: "Hello! I'm your Insurance Assistant, powered by Gemini. I can help you manage clients, policies, and draft reminders. How can I assist you today?",
+          timestamp: new Date()
         }
       ]);
     }
@@ -35,16 +34,33 @@ const GeminiAssistant: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
     const currentInput = input;
     setInput('');
-    
-    // Rule-based logic is deterministic and fast, but we simulate a tiny delay for UX
     setIsLoading(true);
-    
-    setTimeout(() => {
-      const responseText = getChatbotResponse(currentInput);
-      const botMessage: ChatMessage = { role: 'model', text: responseText, timestamp: new Date() };
+
+    try {
+      // Robustly fetch API Key
+      const API_KEY = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || "";
+
+      if (!API_KEY) {
+        throw new Error("Gemini API Key is missing. Please configure GEMINI_API_KEY in your .env file.");
+      }
+
+      // Initialize dynamically to avoid errors if key is missing
+      const genAI = new GoogleGenerativeAI(API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+      const result = await model.generateContent(currentInput);
+      const response = await result.response;
+      const text = response.text();
+
+      const botMessage: ChatMessage = { role: 'model', text: text, timestamp: new Date() };
       setMessages(prev => [...prev, botMessage]);
+    } catch (error: any) {
+      console.error("Gemini API Error:", error);
+      const errorMessage = error.message || "I'm having trouble connecting to Gemini right now.";
+      setMessages(prev => [...prev, { role: 'model', text: `Error: ${errorMessage}`, timestamp: new Date() }]);
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
   return (
@@ -54,9 +70,9 @@ const GeminiAssistant: React.FC = () => {
           <div className="bg-slate-900 p-4 flex items-center justify-between text-white">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs">
-                🤖
+                ✨
               </div>
-              <span className="font-semibold">Support Assistant</span>
+              <span className="font-semibold">Gemini Assistant</span>
             </div>
             <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/10 rounded">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -66,11 +82,10 @@ const GeminiAssistant: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm whitespace-pre-line ${
-                  msg.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-br-none' 
-                  : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
-                }`}>
+                <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm whitespace-pre-line ${msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-none'
+                    : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
+                  }`}>
                   {msg.text}
                 </div>
               </div>
@@ -91,15 +106,15 @@ const GeminiAssistant: React.FC = () => {
 
           <div className="p-4 border-t bg-white">
             <div className="flex space-x-2">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about clients, policies, reminders..."
+                placeholder="Ask Gemini..."
                 className="flex-1 bg-slate-100 px-4 py-2 border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
-              <button 
+              <button
                 onClick={handleSend}
                 disabled={isLoading}
                 className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 disabled:bg-slate-400 transition-colors shadow-md"
@@ -107,15 +122,15 @@ const GeminiAssistant: React.FC = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
               </button>
             </div>
-            <p className="text-[10px] text-center text-slate-400 mt-2">Rule-based helper • Strictly deterministic</p>
+            <p className="text-[10px] text-center text-slate-400 mt-2">Powered by Google Gemini</p>
           </div>
         </div>
       ) : (
-        <button 
+        <button
           onClick={() => setIsOpen(true)}
           className="bg-slate-900 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all duration-300 group"
         >
-          <span className="text-xl group-hover:rotate-12 transition-transform">🤖</span>
+          <span className="text-xl group-hover:rotate-12 transition-transform">✨</span>
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-500 border-2 border-white"></span>

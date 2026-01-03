@@ -7,7 +7,7 @@ const twilio = require('twilio');
  * @param {string} body - The message content
  * @returns {Promise<boolean>} - Success status
  */
-const sendWhatsAppMessage = async (to, body) => {
+const sendWhatsAppMessage = async (to, body, contentSid, contentVariables) => {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromWhatsAppNumber = process.env.TWILIO_WHATSAPP_FROM;
@@ -24,17 +24,28 @@ const sendWhatsAppMessage = async (to, body) => {
     const formattedTo = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
     const formattedFrom = fromWhatsAppNumber.startsWith('whatsapp:') ? fromWhatsAppNumber : `whatsapp:${fromWhatsAppNumber}`;
 
-    const response = await client.messages.create({
-      body: body,
+    const messageOptions = {
       from: formattedFrom,
       to: formattedTo
-    });
+    };
+
+    if (contentSid) {
+      messageOptions.contentSid = contentSid;
+      if (contentVariables) {
+        messageOptions.contentVariables = JSON.stringify(contentVariables);
+      }
+    } else {
+      messageOptions.body = body;
+    }
+
+    const response = await client.messages.create(messageOptions);
 
     console.log(`WhatsApp Success: SID ${response.sid} to ${to}`);
     return true;
   } catch (error) {
     // Step 13.3: Handle invalid numbers and API errors
-    console.error(`WhatsApp Failure to ${to}: Code ${error.code} - ${error.message}`);
+    console.error(`WhatsApp Failure to ${to}:`);
+    console.error(error);
     return false;
   }
 };

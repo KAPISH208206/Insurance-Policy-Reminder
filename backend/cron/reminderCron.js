@@ -22,7 +22,7 @@ const getISTDate = () => {
  */
 const runReminderJob = async () => {
   console.log(`[${new Date().toISOString()}] Cron Job Started: Checking for policy expiries...`);
-  
+
   try {
     // Step 14.2: Ensure date comparison uses IST logic
     const todayIST = getISTDate();
@@ -33,8 +33,8 @@ const runReminderJob = async () => {
       populate: { path: 'brokerId' }
     });
 
-    // Added '0' for Step 13.1 (Policy Expiring Today)
-    const targetMilestones = [30, 20, 10, 5, 1, 0];
+    // Updated milestones: 30, 15, 5, 1 days before expiry
+    const targetMilestones = [30, 15, 5, 1];
 
     for (const policy of policies) {
       const expiry = new Date(policy.expiryDate);
@@ -64,14 +64,28 @@ const runReminderJob = async () => {
           continue;
         }
 
-        // Construct Message
+        // Content Template Logic
+        const contentSid = process.env.TWILIO_CONTENT_SID;
         const expiryStr = policy.expiryDate.toDateString();
+        // Variable Mapping: "1" = Date, "2" = Time (or generic "End of Day")
+        const contentVariables = { "1": expiryStr, "2": "End of Day" };
         const daysLabel = diffDays === 0 ? "TODAY" : `in ${diffDays} days`;
-        const message = `Hi ${client.name}, your policy ${policy.policyNumber} is expiring ${daysLabel} (${expiryStr}). Please contact your broker at ${broker.whatsappNumber} for renewal assistance.`;
 
-        // Step 13.3 & 13.4: Send WhatsApp with failure handling
-        const clientSent = await sendWhatsAppMessage(client.mobileNumber, message);
-        const brokerSent = await sendWhatsAppMessage(broker.whatsappNumber, `Reminder Sent to Client ${client.name}: ${message}`);
+        // Fallback text if template fails (e.g. not joined sandbox)
+        const fallbackMessage = `Hi ${client.name}, your policy ${policy.policyNumber} is expiring ${daysLabel} (${expiryStr}). Please contact your broker at ${broker.whatsappNumber} for assistance.`;
+
+        // Step 13.3 & 13.4: Send WhatsApp with template (supports client and broker)
+        // Send to Client (Template)
+        let clientSent = await sendWhatsAppMessage(client.mobileNumber, fallbackMessage, contentSid, contentVariables);
+        if (!clientSent) {
+          console.log(`Template failed for client ${client.name}, falling back to text.`);
+          clientSent = await sendWhatsAppMessage(client.mobileNumber, fallbackMessage);
+        }
+
+        // Send to Broker (Plain Text is safer/clearer for internal alerts, or could use template too)
+        // For broker, keeping plain text message for clarity on WHICH client it is.
+        const brokerMessage = `Reminder Alert: Client ${client.name}'s policy ${policy.policyNumber} expires ${daysLabel} (${expiryStr}).`;
+        const brokerSent = await sendWhatsAppMessage(broker.whatsappNumber, brokerMessage);
 
         // Step 13.3: Logging status (success/failed)
         await ReminderLog.create({

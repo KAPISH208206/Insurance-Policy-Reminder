@@ -4,11 +4,26 @@ const Client = require('../models/Client');
 exports.addClient = async (req, res) => {
   try {
     const { name, mobileNumber } = req.body;
+
+    // Auto-link Broker: Try finding by Admin email, fallback to any Broker
+    const Admin = require('../models/Admin');
+    const Broker = require('../models/Broker');
+
+    const admin = await Admin.findById(req.adminId);
+    let broker = await Broker.findOne({ email: admin.email });
+
+    if (!broker) {
+      // Fallback: Use the most recent broker (assumes single-tenant or main broker)
+      broker = await Broker.findOne().sort({ createdAt: -1 });
+    }
+
     const client = new Client({
       name,
       mobileNumber,
-      adminId: req.adminId
+      adminId: req.adminId,
+      brokerId: broker ? broker._id : null
     });
+
     await client.save();
     res.status(201).json(client);
   } catch (err) {
