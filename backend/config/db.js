@@ -15,19 +15,31 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false, // Disable Mongoose buffering for serverless
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
     };
 
     const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/insurance_db';
 
-    console.log('Connecting to MongoDB...');
-    cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+    console.log('Connecting to MongoDB Endpoint...');
+
+    // Create a connection promise
+    const connPromise = mongoose.connect(uri, opts).then((mongoose) => {
       console.log('MongoDB Connected Successfully');
       return mongoose;
-    }).catch(err => {
-      console.error('MongoDB Connection Error:', err);
-      throw err;
     });
+
+    // Create a timeout promise (3 seconds)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('MongoDB Connection Timed Out (Hard Limit 3s)')), 3000)
+    );
+
+    // Race them
+    cached.promise = Promise.race([connPromise, timeoutPromise])
+      .catch(err => {
+        console.error('MongoDB Initial Connection Error:', err);
+        throw err;
+      });
   }
 
   try {

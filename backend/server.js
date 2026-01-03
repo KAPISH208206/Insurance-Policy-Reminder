@@ -18,13 +18,34 @@ app.use(cors({
 app.use(express.json());
 
 // Ensure DB is connected before handling any request (Critical for Serverless with bufferCommands: false)
+// Basic Health Check (No DB dependency) - Moved UP for debugging
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Insurance Backend is running' });
+});
+
+app.get('/', (req, res) => {
+  res.send('Insurance Backend API is running. Please access the frontend at http://localhost:3000');
+});
+
+// Debug Route to check Env Vars (Masked)
+app.get('/api/debug', (req, res) => {
+  res.json({
+    hasMongoURI: !!process.env.MONGO_URI,
+    mongoURILength: process.env.MONGO_URI ? process.env.MONGO_URI.length : 0,
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    deployTimestamp: new Date().toISOString()
+  });
+});
+
+// Ensure DB is connected before handling any request (Critical for Serverless with bufferCommands: false)
 app.use(async (req, res, next) => {
+  if (req.path === '/api/health' || req.path === '/') return next(); // Skip DB check for health/root
   try {
     await connectDB();
     next();
   } catch (err) {
     console.error('Database connection failed in middleware:', err);
-    res.status(500).json({ message: 'Database connection failed' });
+    res.status(500).json({ message: 'Database connection failed', error: err.message });
   }
 });
 
